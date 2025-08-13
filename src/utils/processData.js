@@ -29,8 +29,9 @@ function detectCategory(merchant, item) {
 }
 
 // 主处理函数
-export function processData(rows) {
-  return rows
+export function processData(rows = []) {
+  const list = Array.isArray(rows) ? rows : [];
+  return list
     .filter(row => row && Object.keys(row).length > 0) // 去掉空行
     .map(row => {
       return {
