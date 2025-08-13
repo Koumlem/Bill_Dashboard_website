@@ -1,4 +1,6 @@
 // src/components/Layout.jsx
+import { NavLink } from 'react-router-dom'
+
 export default function Layout({ children }) {
   return (
     <div className="fixed inset-0 flex bg-zinc-100 font-sans">  {/* 贴边铺满 */}
@@ -8,9 +10,9 @@ export default function Layout({ children }) {
           <span>Bill Dashboard</span>
         </h1>
         <nav className="flex flex-col space-y-4 text-sm">
-          <NavLink label="仪表盘" />
-          <NavLink label="账单导入" />
-          <NavLink label="分类汇总" />
+          <NavItem to="/analysis" label="仪表盘" />
+          <NavItem to="/" label="账单导入" />
+          <NavItem to="#" label="分类汇总" />
         </nav>
       </aside>
 
@@ -23,13 +25,17 @@ export default function Layout({ children }) {
   );
 }
 
-function NavLink({ label }) {
+function NavItem({ to, label }) {
   return (
-    <a
-      href="#"
-      className="px-3 py-2 rounded-md hover:bg-zinc-700 hover:text-yellow-300 transition-colors"
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `px-3 py-2 rounded-md hover:bg-zinc-700 hover:text-yellow-300 transition-colors${
+          isActive ? ' bg-zinc-700 text-yellow-300' : ''
+        }`
+      }
     >
       {label}
-    </a>
+    </NavLink>
   );
 }
