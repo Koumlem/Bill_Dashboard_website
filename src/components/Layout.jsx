@@ -15,7 +15,7 @@ export default function Layout({ children }) {
       </aside>
 
       <main className="flex-1 p-0 overflow-auto">                  {/* 去掉 p-10 */}
-        <div className="max-w-6xl mx-auto p-8">                    {/* 需要留白再在内容层控 */}
+        <div className="max-w-6xl mx-auto p-8">                    {/* 需要留白请在内容层控制 */}
           {children}
         </div>
       </main>
