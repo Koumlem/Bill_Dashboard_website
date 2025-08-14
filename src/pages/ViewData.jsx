@@ -11,12 +11,12 @@ export default function ViewData() {
   const defaultWidths = {
     time: 140,
     merchant: 140,
-    item: 200,
+    item: 140,
     type: 140,
     amount: 140,
-    channel: 140,
+    channel: 100,
     status: 140,
-    note: 100
+    note: 140
   }
   const [colWidths, setColWidths] = useState(defaultWidths)
 
