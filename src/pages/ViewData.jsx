@@ -11,12 +11,12 @@ export default function ViewData() {
   const defaultWidths = {
     time: 140,
     merchant: 140,
-    item: 300,
+    item: 200,
     type: 140,
     amount: 140,
     channel: 140,
     status: 140,
-    note: 200
+    note: 100
   }
   const [colWidths, setColWidths] = useState(defaultWidths)
 
@@ -138,9 +138,7 @@ export default function ViewData() {
                   key={f}
                   style={{ width: colWidths[f], minWidth: colWidths[f] }}
                   className={`relative px-3 py-2 truncate border-r border-zinc-200 last:border-r-0 ${
-                    ['amount', 'type', 'status'].includes(f)
-                      ? 'text-center'
-                      : 'text-left'
+                    f === 'time' ? 'text-left' : 'text-center'
                   }`}
                 >
                   {headers[i]}
