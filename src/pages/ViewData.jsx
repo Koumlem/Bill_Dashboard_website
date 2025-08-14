@@ -10,11 +10,11 @@ export default function ViewData() {
   // 默认列宽
   const defaultWidths = {
     time: 140,
-    merchant: 140,
-    item: 140,
-    type: 140,
+    merchant: 200,
     amount: 140,
-    channel: 100,
+    item: 200,
+    type: 140,
+    channel: 150,
     status: 140,
     note: 140
   }
@@ -103,8 +103,8 @@ export default function ViewData() {
     window.addEventListener('mouseup', onMouseUp)
   }
 
-  const fields = ['time', 'merchant', 'item', 'type', 'amount', 'channel', 'status', 'note']
-  const headers = ['时间', '交易对方', '商品说明', '收/支', '金额', '收/付款方式', '交易状态', '备注']
+  const fields = ['time', 'merchant', 'amount', 'item', 'type', 'channel', 'status', 'note']
+  const headers = ['时间', '交易对方', '金额', '商品说明', '收/支', '收/付款方式', '交易状态', '备注']
 
   return (
     <div className="p-6">
@@ -136,8 +136,8 @@ export default function ViewData() {
               {fields.map((f, i) => (
                 <th
                   key={f}
-                  style={{ width: colWidths[f], minWidth: colWidths[f] }}
-                  className={`relative px-3 py-2 truncate border-r border-zinc-200 last:border-r-0 ${
+                  style={{ width: colWidths[f], minWidth: colWidths[f], maxWidth: colWidths[f] }}
+                  className={`relative px-3 py-2 border-r border-zinc-200 last:border-r-0 break-words ${
                     f === 'time' ? 'text-left' : 'text-center'
                   }`}
                 >
@@ -156,8 +156,8 @@ export default function ViewData() {
                 {fields.map(f => (
                   <td
                     key={f}
-                    style={{ width: colWidths[f], minWidth: colWidths[f] }}
-                    className={`px-3 py-2 truncate border-r border-zinc-200 last:border-r-0 cursor-pointer ${
+                    style={{ width: colWidths[f], minWidth: colWidths[f], maxWidth: colWidths[f] }}
+                    className={`px-3 py-2 border-r border-zinc-200 last:border-r-0 cursor-pointer break-words ${
                       ['amount', 'type', 'status'].includes(f) ? 'text-center' : ''
                     }`}
                     onClick={() => handleCellClick(idx, f)}
