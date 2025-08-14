@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 
 export default function Analysis() {
   const [txns, setTxns] = useState([])
+  const [tags, setTags] = useState([])
+  const [selectedTags, setSelectedTags] = useState([])
 
   // 日期筛选模式：all 或 range
   const [dateMode, setDateMode] = useState('all')
@@ -15,6 +17,12 @@ export default function Analysis() {
   useEffect(() => {
     const saved = localStorage.getItem('transactions')
     if (saved) setTxns(JSON.parse(saved))
+    const savedTags = localStorage.getItem('tags')
+    if (savedTags) {
+      const t = JSON.parse(savedTags)
+      setTags(t)
+      setSelectedTags(t.map(x => x.name))
+    }
   }, [])
 
   // 按日期过滤
@@ -41,6 +49,34 @@ export default function Analysis() {
       ? String(t.type).includes('支')
       : String(t.type).includes('收')
   )
+
+  const dateAmounts = {}
+  typeFiltered.forEach(t => {
+    const d = t.time ? t.time.slice(0, 10) : ''
+    if (!d) return
+    if (!dateAmounts[d]) dateAmounts[d] = {}
+    const tagNames = t.tags && t.tags.length ? t.tags : ['未分类']
+    const amount = Math.abs(parseFloat(t.amount || 0))
+    tagNames.forEach(name => {
+      dateAmounts[d][name] = (dateAmounts[d][name] || 0) + amount
+    })
+  })
+  const sortedDates = Object.keys(dateAmounts).sort(
+    (a, b) => new Date(a) - new Date(b)
+  )
+  const chartData = sortedDates.map(d => ({ date: d, ...dateAmounts[d] }))
+  const chartWidth = chartData.length * 60 + 80
+  const viewWidth = Math.min(chartWidth, 31 * 60 + 80)
+  const maxAmount = Math.max(
+    0,
+    ...chartData.flatMap(d => tags.map(t => d[t.name] || 0))
+  )
+
+  const toggleTag = name => {
+    setSelectedTags(prev =>
+      prev.includes(name) ? prev.filter(t => t !== name) : [...prev, name]
+    )
+  }
 
   // 取金额最大的前五条记录
   const topTxns = [...typeFiltered]
@@ -118,18 +154,77 @@ export default function Analysis() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-xl bg-white shadow p-4 font-semibold">
-          总支出：<span className="text-red-600">￥{totalExpense.toFixed(2)}</span>
-        </div>
-        <div className="rounded-xl bg-white shadow p-4 font-semibold">
-          总收入：<span className="text-green-600">￥{totalIncome.toFixed(2)}</span>
-        </div>
+      <div className="rounded-xl bg-white shadow p-4 font-semibold">
+        总支出：<span className="text-red-600">￥{totalExpense.toFixed(2)}</span>
       </div>
+      <div className="rounded-xl bg-white shadow p-4 font-semibold">
+        总收入：<span className="text-green-600">￥{totalIncome.toFixed(2)}</span>
+      </div>
+    </div>
 
-      <h3 className="text-xl font-semibold mt-6 mb-2">{displayType}最多的五项记录</h3>
-      <div className="space-y-2">
-        {topTxns.map((t, i) => (
-          <div
+    {/* 折线图 */}
+    <div className="my-6">
+      <div className="flex flex-wrap gap-4 mb-2">
+        {tags.map(t => (
+          <label key={t.name} className="flex items-center gap-1 text-sm">
+            <input
+              type="checkbox"
+              checked={selectedTags.includes(t.name)}
+              onChange={() => toggleTag(t.name)}
+            />
+            <span
+              className="inline-block w-3 h-3 rounded"
+              style={{ backgroundColor: t.color }}
+            />
+            {t.name}
+          </label>
+        ))}
+      </div>
+      <div className="overflow-x-auto" style={{ width: viewWidth }}>
+        <svg width={chartWidth} height={250}>
+          <line x1="40" y1="200" x2={chartWidth - 40} y2="200" stroke="#000" />
+          <line x1="40" y1="20" x2="40" y2="200" stroke="#000" />
+          {selectedTags.map(name => {
+            const color = tags.find(t => t.name === name)?.color || '#000'
+            const points = chartData
+              .map((d, i) => {
+                const x = i * 60 + 40
+                const y = 200 - ((d[name] || 0) / (maxAmount || 1)) * 180
+                return `${x},${y}`
+              })
+              .join(' ')
+            return (
+              <polyline
+                key={name}
+                points={points}
+                fill="none"
+                stroke={color}
+                strokeWidth="2"
+              />
+            )
+          })}
+          {chartData.map((d, i) => {
+            const x = i * 60 + 40
+            return (
+              <text
+                key={d.date}
+                x={x}
+                y={215}
+                textAnchor="middle"
+                fontSize="10"
+              >
+                {d.date.slice(5)}
+              </text>
+            )
+          })}
+        </svg>
+      </div>
+    </div>
+
+    <h3 className="text-xl font-semibold mt-6 mb-2">{displayType}最多的五项记录</h3>
+    <div className="space-y-2">
+      {topTxns.map((t, i) => (
+        <div
             key={i}
             className={`rounded-lg p-4 ${
               displayType === '支出' ? 'bg-red-500/50' : 'bg-green-500/50'

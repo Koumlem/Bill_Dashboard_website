@@ -3,6 +3,11 @@ import { useEffect, useRef, useState } from 'react'
 export default function ViewData() {
   const [txns, setTxns] = useState([])
   const [editing, setEditing] = useState({ index: null, field: null })
+  const [tags, setTags] = useState([])
+  const [tagModal, setTagModal] = useState({ index: null })
+  const [selectedTags, setSelectedTags] = useState([])
+  const [newTagName, setNewTagName] = useState('')
+  const [newTagColor, setNewTagColor] = useState('#000000')
   const topRef = useRef(null)
   const bodyRef = useRef(null)
   const tableRef = useRef(null)
@@ -15,6 +20,7 @@ export default function ViewData() {
     item: 200,
     type: 140,
     channel: 150,
+    tags: 200,
     status: 140,
     note: 140
   }
@@ -26,6 +32,10 @@ export default function ViewData() {
       const data = JSON.parse(saved)
       data.sort((a, b) => new Date(b.time) - new Date(a.time))
       setTxns(data)
+    }
+    const savedTags = localStorage.getItem('tags')
+    if (savedTags) {
+      setTags(JSON.parse(savedTags))
     }
   }, [])
 
@@ -55,7 +65,12 @@ export default function ViewData() {
   }, [txns, colWidths])
 
   const handleCellClick = (index, field) => {
-    setEditing({ index, field })
+    if (field === 'tags') {
+      setSelectedTags(txns[index].tags || [])
+      setTagModal({ index })
+    } else {
+      setEditing({ index, field })
+    }
   }
 
   const handleCellChange = (index, field, value) => {
@@ -83,6 +98,30 @@ export default function ViewData() {
     localStorage.removeItem('transactions')
   }
 
+  const handleAddTag = () => {
+    if (!newTagName.trim()) return
+    const updated = [...tags, { name: newTagName.trim(), color: newTagColor }]
+    setTags(updated)
+    localStorage.setItem('tags', JSON.stringify(updated))
+    setNewTagName('')
+  }
+
+  const toggleSelectTag = name => {
+    setSelectedTags(prev =>
+      prev.includes(name) ? prev.filter(t => t !== name) : [...prev, name]
+    )
+  }
+
+  const handleSaveTags = () => {
+    setTxns(prev => {
+      const next = [...prev]
+      next[tagModal.index] = { ...next[tagModal.index], tags: selectedTags }
+      localStorage.setItem('transactions', JSON.stringify(next))
+      return next
+    })
+    setTagModal({ index: null })
+  }
+
   // 拖拽调整列宽
   const handleMouseDown = (e, key) => {
     e.preventDefault()
@@ -103,8 +142,28 @@ export default function ViewData() {
     window.addEventListener('mouseup', onMouseUp)
   }
 
-  const fields = ['time', 'merchant', 'amount', 'item', 'type', 'channel', 'status', 'note']
-  const headers = ['时间', '交易对方', '金额', '商品说明', '收/支', '收/付款方式', '交易状态', '备注']
+  const fields = [
+    'time',
+    'merchant',
+    'amount',
+    'item',
+    'type',
+    'channel',
+    'tags',
+    'status',
+    'note'
+  ]
+  const headers = [
+    '时间',
+    '交易对方',
+    '金额',
+    '商品说明',
+    '收/支',
+    '收/付款方式',
+    '标签',
+    '交易状态',
+    '备注'
+  ]
 
   return (
     <div className="p-6">
@@ -162,7 +221,24 @@ export default function ViewData() {
                     }`}
                     onClick={() => handleCellClick(idx, f)}
                   >
-                    {editing.index === idx && editing.field === f ? (
+                    {f === 'tags' ? (
+                      r.tags && r.tags.length ? (
+                        r.tags.map(tagName => {
+                          const tag = tags.find(t => t.name === tagName)
+                          return (
+                            <span
+                              key={tagName}
+                              className="inline-block px-1 mr-1 rounded text-white text-xs"
+                              style={{ backgroundColor: tag?.color || '#999' }}
+                            >
+                              {tagName}
+                            </span>
+                          )
+                        })
+                      ) : (
+                        <span className="text-zinc-400">+</span>
+                      )
+                    ) : editing.index === idx && editing.field === f ? (
                       <input
                         value={txns[idx][f] || ''}
                         onChange={e => handleCellChange(idx, f, e.target.value)}
@@ -192,6 +268,62 @@ export default function ViewData() {
           </tbody>
         </table>
       </div>
+      {tagModal.index !== null && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+          <div className="bg-white rounded p-4 w-72 space-y-2">
+            <div className="max-h-40 overflow-y-auto space-y-1">
+              {tags.map(t => (
+                <label key={t.name} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedTags.includes(t.name)}
+                    onChange={() => toggleSelectTag(t.name)}
+                  />
+                  <span
+                    className="inline-block w-3 h-3 rounded"
+                    style={{ backgroundColor: t.color }}
+                  />
+                  <span>{t.name}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={newTagColor}
+                onChange={e => setNewTagColor(e.target.value)}
+              />
+              <input
+                type="text"
+                value={newTagName}
+                onChange={e => setNewTagName(e.target.value)}
+                placeholder="标签名字"
+                className="border rounded px-2 py-1 flex-1"
+              />
+              <button
+                onClick={handleAddTag}
+                className="px-2 py-1 bg-blue-500 text-white rounded"
+              >
+                添加
+              </button>
+            </div>
+            <div className="text-right space-x-2 pt-2">
+              <button
+                onClick={handleSaveTags}
+                className="px-3 py-1 bg-blue-500 text-white rounded"
+              >
+                保存
+              </button>
+              <button
+                onClick={() => setTagModal({ index: null })}
+                className="px-3 py-1 bg-zinc-200 rounded"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
