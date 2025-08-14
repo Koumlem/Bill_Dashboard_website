@@ -1,5 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 
+const defaultTags = [
+  { name: '餐饮', color: '#FF6F61' },
+  { name: '日用品', color: '#FFD54F' },
+  { name: '医疗健康', color: '#81C784' },
+  { name: '交通', color: '#64B5F6' },
+  { name: '数码/虚拟', color: '#BA68C8' },
+  { name: '娱乐', color: '#F06292' },
+  { name: '转账/人情', color: '#A1887F' },
+  { name: '学习/订阅', color: '#4DB6AC' },
+  { name: '其他', color: '#E0E0E0' }
+]
+
 export default function ViewData() {
   const [txns, setTxns] = useState([])
   const [editing, setEditing] = useState({ index: null, field: null })
@@ -8,6 +20,7 @@ export default function ViewData() {
   const [selectedTags, setSelectedTags] = useState([])
   const [newTagName, setNewTagName] = useState('')
   const [newTagColor, setNewTagColor] = useState('#000000')
+  const [editingTag, setEditingTag] = useState(null)
   const topRef = useRef(null)
   const bodyRef = useRef(null)
   const tableRef = useRef(null)
@@ -36,6 +49,9 @@ export default function ViewData() {
     const savedTags = localStorage.getItem('tags')
     if (savedTags) {
       setTags(JSON.parse(savedTags))
+    } else {
+      setTags(defaultTags)
+      localStorage.setItem('tags', JSON.stringify(defaultTags))
     }
   }, [])
 
@@ -113,6 +129,42 @@ export default function ViewData() {
     localStorage.setItem('tags', JSON.stringify(updated))
   }
 
+  const handleTagColorChange = (index, color) => {
+    setTags(prev => {
+      const next = [...prev]
+      next[index] = { ...next[index], color }
+      localStorage.setItem('tags', JSON.stringify(next))
+      return next
+    })
+  }
+
+  const startEditTag = index => {
+    setEditingTag({ index, name: tags[index].name })
+  }
+
+  const saveEditTag = index => {
+    const oldName = tags[index].name
+    const newName = editingTag.name.trim()
+    if (!newName) {
+      setEditingTag(null)
+      return
+    }
+    const updatedTags = [...tags]
+    updatedTags[index] = { ...updatedTags[index], name: newName }
+    setTags(updatedTags)
+    setSelectedTags(prev => prev.map(t => (t === oldName ? newName : t)))
+    setTxns(prev => {
+      const next = prev.map(txn => ({
+        ...txn,
+        tags: txn.tags?.map(t => (t === oldName ? newName : t))
+      }))
+      localStorage.setItem('transactions', JSON.stringify(next))
+      return next
+    })
+    localStorage.setItem('tags', JSON.stringify(updatedTags))
+    setEditingTag(null)
+  }
+
   const toggleSelectTag = name => {
     setSelectedTags(prev =>
       prev.includes(name) ? prev.filter(t => t !== name) : [...prev, name]
@@ -127,6 +179,7 @@ export default function ViewData() {
       return next
     })
     setTagModal({ index: null })
+    setEditingTag(null)
   }
 
   // 拖拽调整列宽
@@ -279,18 +332,36 @@ export default function ViewData() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
           <div className="bg-white rounded p-4 w-72 space-y-2">
             <div className="max-h-40 overflow-y-auto space-y-1">
-              {tags.map(t => (
+              {tags.map((t, i) => (
                 <div key={t.name} className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={selectedTags.includes(t.name)}
                     onChange={() => toggleSelectTag(t.name)}
                   />
-                  <span
-                    className="inline-block w-3 h-3"
-                    style={{ backgroundColor: t.color }}
+                  <input
+                    type="color"
+                    value={t.color}
+                    onChange={e => handleTagColorChange(i, e.target.value)}
+                    className="w-5 h-5 p-0 border-0"
                   />
-                  <span>{t.name}</span>
+                  {editingTag && editingTag.index === i ? (
+                    <input
+                      value={editingTag.name}
+                      onChange={e => setEditingTag({ index: i, name: e.target.value })}
+                      onBlur={() => saveEditTag(i)}
+                      onKeyDown={e => e.key === 'Enter' && saveEditTag(i)}
+                      className="border rounded px-1 flex-1"
+                      autoFocus
+                    />
+                  ) : (
+                    <span
+                      onClick={() => startEditTag(i)}
+                      className="flex-1 cursor-text"
+                    >
+                      {t.name}
+                    </span>
+                  )}
                   <button
                     onClick={() => handleDeleteTag(t.name)}
                     className="text-xs text-zinc-400 hover:text-zinc-600"
@@ -305,6 +376,13 @@ export default function ViewData() {
                 type="color"
                 value={newTagColor}
                 onChange={e => setNewTagColor(e.target.value)}
+              />
+              <input
+                type="text"
+                value={newTagColor}
+                onChange={e => setNewTagColor(e.target.value)}
+                placeholder="#RRGGBB"
+                className="border rounded px-2 py-1 w-24"
               />
               <input
                 type="text"
@@ -328,7 +406,10 @@ export default function ViewData() {
                 保存
               </button>
               <button
-                onClick={() => setTagModal({ index: null })}
+                onClick={() => {
+                  setTagModal({ index: null })
+                  setEditingTag(null)
+                }}
                 className="px-3 py-1 bg-zinc-200 rounded"
               >
                 取消
