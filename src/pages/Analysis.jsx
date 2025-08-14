@@ -14,6 +14,14 @@ export default function Analysis() {
   // 显示类型：支出 或 收入
   const [displayType, setDisplayType] = useState('支出')
 
+  // 图表视图：年视图 或 月视图，暂时只实现月视图
+  const [viewType, setViewType] = useState('month')
+  // 当前选择的月份，格式 yyyy-MM
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const d = new Date()
+    return d.toISOString().slice(0, 7)
+  })
+
   useEffect(() => {
     const saved = localStorage.getItem('transactions')
     if (saved) setTxns(JSON.parse(saved))
@@ -34,17 +42,28 @@ export default function Analysis() {
     return true
   })
 
+  // 若选择月视图，则只保留当前选择月份的数据
+  const periodFiltered =
+    viewType === 'month'
+      ? dateFiltered.filter(t => {
+          if (!t.time) return false
+          const d = new Date(t.time)
+          const [y, m] = selectedMonth.split('-').map(Number)
+          return d.getFullYear() === y && d.getMonth() + 1 === m
+        })
+      : dateFiltered
+
   // 计算该时间段内的总支出和总收入
-  const totalExpense = dateFiltered
+  const totalExpense = periodFiltered
     .filter(t => String(t.type).includes('支'))
     .reduce((sum, t) => sum + Math.abs(parseFloat(t.amount || 0)), 0)
 
-  const totalIncome = dateFiltered
+  const totalIncome = periodFiltered
     .filter(t => String(t.type).includes('收'))
     .reduce((sum, t) => sum + Math.abs(parseFloat(t.amount || 0)), 0)
 
   // 根据支出/收入选择过滤
-  const typeFiltered = dateFiltered.filter(t =>
+  const typeFiltered = periodFiltered.filter(t =>
     displayType === '支出'
       ? String(t.type).includes('支')
       : String(t.type).includes('收')
@@ -61,16 +80,38 @@ export default function Analysis() {
       dateAmounts[d][name] = (dateAmounts[d][name] || 0) + amount
     })
   })
-  const sortedDates = Object.keys(dateAmounts).sort(
-    (a, b) => new Date(a) - new Date(b)
-  )
+  let sortedDates
+  let daysInMonth = 31
+  if (viewType === 'month') {
+    const [y, m] = selectedMonth.split('-').map(Number)
+    daysInMonth = new Date(y, m, 0).getDate()
+    sortedDates = Array.from({ length: daysInMonth }, (_, i) =>
+      `${selectedMonth}-${String(i + 1).padStart(2, '0')}`
+    )
+  } else {
+    sortedDates = Object.keys(dateAmounts).sort(
+      (a, b) => new Date(a) - new Date(b)
+    )
+  }
   const chartData = sortedDates.map(d => ({ date: d, ...dateAmounts[d] }))
   const chartWidth = chartData.length * 60 + 80
-  const viewWidth = Math.min(chartWidth, 31 * 60 + 80)
+  const viewWidth = Math.min(
+    chartWidth,
+    (viewType === 'month' ? sortedDates.length : 31) * 60 + 80
+  )
   const maxAmount = Math.max(
     0,
-    ...chartData.flatMap(d => tags.map(t => d[t.name] || 0))
+    ...chartData.flatMap(d => selectedTags.map(name => d[name] || 0))
   )
+  const base = maxAmount / 4
+  let unit
+  if (base < 10) unit = 10
+  else if (base < 50) unit = 50
+  else if (base < 150) unit = 50
+  else if (base < 500) unit = 500
+  else if (base < 1000) unit = 1000
+  else unit = 1000
+  const yMax = unit * 4
 
   const toggleTag = name => {
     setSelectedTags(prev =>
@@ -164,6 +205,38 @@ export default function Analysis() {
 
     {/* 折线图 */}
     <div className="my-6">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex gap-2 text-sm">
+          <button
+            onClick={() => setViewType('year')}
+            className={`px-3 py-1 rounded ${
+              viewType === 'year'
+                ? 'bg-blue-500 text-white'
+                : 'bg-zinc-200 text-zinc-700'
+            }`}
+          >
+            年视图
+          </button>
+          <button
+            onClick={() => setViewType('month')}
+            className={`px-3 py-1 rounded ${
+              viewType === 'month'
+                ? 'bg-blue-500 text-white'
+                : 'bg-zinc-200 text-zinc-700'
+            }`}
+          >
+            月视图
+          </button>
+        </div>
+        {viewType === 'month' && (
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={e => setSelectedMonth(e.target.value)}
+            className="border rounded px-2 py-1 text-sm"
+          />
+        )}
+      </div>
       <div className="flex flex-wrap gap-4 mb-2">
         {tags.map(t => (
           <label key={t.name} className="flex items-center gap-1 text-sm">
@@ -184,12 +257,37 @@ export default function Analysis() {
         <svg width={chartWidth} height={250}>
           <line x1="40" y1="200" x2={chartWidth - 40} y2="200" stroke="#000" />
           <line x1="40" y1="20" x2="40" y2="200" stroke="#000" />
+          {[1, 2, 3, 4].map(i => {
+            const y = 200 - (i * 180) / 4
+            return (
+              <g key={i}>
+                <line
+                  x1="40"
+                  y1={y}
+                  x2={chartWidth - 40}
+                  y2={y}
+                  stroke="#facc15"
+                />
+                <text
+                  x="10"
+                  y={y + 4}
+                  fontSize="10"
+                  fill="#facc15"
+                >
+                  {unit * i}
+                </text>
+              </g>
+            )
+          })}
+          <text x="10" y={204} fontSize="10" fill="#facc15">
+            0
+          </text>
           {selectedTags.map(name => {
             const color = tags.find(t => t.name === name)?.color || '#000'
             const points = chartData
               .map((d, i) => {
                 const x = i * 60 + 40
-                const y = 200 - ((d[name] || 0) / (maxAmount || 1)) * 180
+                const y = 200 - ((d[name] || 0) / (yMax || 1)) * 180
                 return `${x},${y}`
               })
               .join(' ')
@@ -205,6 +303,14 @@ export default function Analysis() {
           })}
           {chartData.map((d, i) => {
             const x = i * 60 + 40
+            const day = parseInt(d.date.slice(8))
+            if (
+              viewType === 'month' &&
+              day !== 1 &&
+              day !== 15 &&
+              day !== daysInMonth
+            )
+              return null
             return (
               <text
                 key={d.date}
@@ -213,7 +319,7 @@ export default function Analysis() {
                 textAnchor="middle"
                 fontSize="10"
               >
-                {d.date.slice(5)}
+                {viewType === 'month' ? day : d.date.slice(5)}
               </text>
             )
           })}
