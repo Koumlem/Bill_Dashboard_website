@@ -95,10 +95,6 @@ export default function Analysis() {
   }
   const chartData = sortedDates.map(d => ({ date: d, ...dateAmounts[d] }))
   const chartWidth = chartData.length * 60 + 80
-  const viewWidth = Math.min(
-    chartWidth,
-    (viewType === 'month' ? sortedDates.length : 31) * 60 + 80
-  )
   const maxAmount = Math.max(
     0,
     ...chartData.flatMap(d => selectedTags.map(name => d[name] || 0))
@@ -253,7 +249,7 @@ export default function Analysis() {
           </label>
         ))}
       </div>
-      <div className="overflow-x-auto" style={{ width: viewWidth }}>
+      <div className="overflow-x-auto w-full">
         <svg width={chartWidth} height={250}>
           <line x1="40" y1="200" x2={chartWidth - 40} y2="200" stroke="#000" />
           <line x1="40" y1="20" x2="40" y2="200" stroke="#000" />
@@ -303,24 +299,36 @@ export default function Analysis() {
           })}
           {chartData.map((d, i) => {
             const x = i * 60 + 40
-            const day = parseInt(d.date.slice(8))
-            if (
-              viewType === 'month' &&
-              day !== 1 &&
-              day !== 15 &&
-              day !== daysInMonth
-            )
-              return null
+            const dateObj = new Date(d.date)
+            const day = dateObj.getDate()
+            const isSunday = dateObj.getDay() === 0
+            const isSpecial = day === 1 || day === 15 || day === daysInMonth
+            if (viewType !== 'month') {
+              return (
+                <text
+                  key={d.date}
+                  x={x}
+                  y={215}
+                  textAnchor="middle"
+                  fontSize="10"
+                >
+                  {d.date.slice(5)}
+                </text>
+              )
+            }
             return (
-              <text
-                key={d.date}
-                x={x}
-                y={215}
-                textAnchor="middle"
-                fontSize="10"
-              >
-                {viewType === 'month' ? day : d.date.slice(5)}
-              </text>
+              <g key={d.date}>
+                {isSunday && (
+                  <text x={x} y={12} textAnchor="middle" fontSize="10">
+                    Sun.
+                  </text>
+                )}
+                {isSpecial && (
+                  <text x={x} y={215} textAnchor="middle" fontSize="10">
+                    {day}
+                  </text>
+                )}
+              </g>
             )
           })}
         </svg>

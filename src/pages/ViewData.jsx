@@ -329,7 +329,7 @@ export default function ViewData() {
         </table>
       </div>
       {tagModal.index !== null && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded p-4 w-72 space-y-2">
             <div className="max-h-40 overflow-y-auto space-y-1">
               {tags.map((t, i) => (
