@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export default function ViewData() {
   const [txns, setTxns] = useState([])
   const [editing, setEditing] = useState({ index: null, field: null })
+  const topRef = useRef(null)
+  const bodyRef = useRef(null)
+  const tableRef = useRef(null)
 
   useEffect(() => {
     const saved = localStorage.getItem('transactions')
@@ -12,6 +15,31 @@ export default function ViewData() {
       setTxns(data)
     }
   }, [])
+
+  useEffect(() => {
+    const top = topRef.current
+    const body = bodyRef.current
+    if (!top || !body) return
+    const syncTop = () => {
+      top.scrollLeft = body.scrollLeft
+    }
+    const syncBody = () => {
+      body.scrollLeft = top.scrollLeft
+    }
+    body.addEventListener('scroll', syncTop)
+    top.addEventListener('scroll', syncBody)
+    return () => {
+      body.removeEventListener('scroll', syncTop)
+      top.removeEventListener('scroll', syncBody)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (tableRef.current && topRef.current) {
+      const width = tableRef.current.scrollWidth
+      topRef.current.firstChild.style.width = `${width}px`
+    }
+  }, [txns])
 
   const handleCellClick = (index, field) => {
     setEditing({ index, field })
@@ -62,13 +90,26 @@ export default function ViewData() {
           重置数据
         </button>
       </div>
-      <div className="overflow-auto rounded border border-zinc-200 bg-white shadow">
-        <table className="min-w-full text-sm">
-          <thead className="bg-zinc-50">
+      <div className="overflow-x-auto mb-2" ref={topRef}>
+        <div className="h-4" />
+      </div>
+      <div
+        className="overflow-y-auto overflow-x-hidden rounded border border-zinc-200 bg-white shadow max-h-[70vh]"
+        ref={bodyRef}
+      >
+        <table ref={tableRef} className="min-w-full text-sm">
+          <thead className="bg-zinc-50 sticky top-0 z-10">
             <tr>
-              {headers.map(h => (
-                <th key={h} className="px-3 py-2 whitespace-nowrap text-left">
-                  {h}
+              {fields.map((f, i) => (
+                <th
+                  key={f}
+                  className={`px-3 py-2 text-left ${
+                    f === 'item'
+                      ? 'max-w-[12rem] whitespace-normal break-all'
+                      : 'whitespace-nowrap'
+                  }`}
+                >
+                  {headers[i]}
                 </th>
               ))}
             </tr>
@@ -79,7 +120,11 @@ export default function ViewData() {
                 {fields.map(f => (
                   <td
                     key={f}
-                    className="px-3 py-2 whitespace-nowrap cursor-pointer"
+                    className={`px-3 py-2 cursor-pointer ${
+                      f === 'item'
+                        ? 'max-w-[12rem] whitespace-normal break-all'
+                        : 'whitespace-nowrap'
+                    }`}
                     onClick={() => handleCellClick(idx, f)}
                   >
                     {editing.index === idx && editing.field === f ? (
