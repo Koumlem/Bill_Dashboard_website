@@ -371,25 +371,26 @@ export default function ViewData() {
                 </div>
               ))}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2">
               <input
                 type="color"
                 value={newTagColor}
                 onChange={e => setNewTagColor(e.target.value)}
+                className="self-start"
               />
               <input
                 type="text"
                 value={newTagColor}
                 onChange={e => setNewTagColor(e.target.value)}
                 placeholder="#RRGGBB"
-                className="border rounded px-2 py-1 w-24"
+                className="border rounded px-2 py-1 w-full"
               />
               <input
                 type="text"
                 value={newTagName}
                 onChange={e => setNewTagName(e.target.value)}
                 placeholder="标签名字"
-                className="border rounded px-2 py-1 flex-1"
+                className="border rounded px-2 py-1 w-full"
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
