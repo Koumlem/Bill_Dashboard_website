@@ -7,6 +7,19 @@ export default function ViewData() {
   const bodyRef = useRef(null)
   const tableRef = useRef(null)
 
+  // 默认列宽
+  const defaultWidths = {
+    time: 140,
+    merchant: 140,
+    item: 300,
+    type: 140,
+    amount: 140,
+    channel: 140,
+    status: 140,
+    note: 200
+  }
+  const [colWidths, setColWidths] = useState(defaultWidths)
+
   useEffect(() => {
     const saved = localStorage.getItem('transactions')
     if (saved) {
@@ -39,7 +52,7 @@ export default function ViewData() {
       const width = tableRef.current.scrollWidth
       topRef.current.firstChild.style.width = `${width}px`
     }
-  }, [txns])
+  }, [txns, colWidths])
 
   const handleCellClick = (index, field) => {
     setEditing({ index, field })
@@ -70,8 +83,28 @@ export default function ViewData() {
     localStorage.removeItem('transactions')
   }
 
-  const fields = ['time', 'merchant', 'item', 'type', 'channel', 'status', 'note']
-  const headers = ['时间', '交易对方', '商品说明', '收/支', '收/付款方式', '交易状态', '备注']
+  // 拖拽调整列宽
+  const handleMouseDown = (e, key) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = colWidths[key]
+
+    const onMouseMove = e2 => {
+      const newWidth = Math.max(60, startWidth + e2.clientX - startX)
+      setColWidths(w => ({ ...w, [key]: newWidth }))
+    }
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }
+
+  const fields = ['time', 'merchant', 'item', 'type', 'amount', 'channel', 'status', 'note']
+  const headers = ['时间', '交易对方', '商品说明', '收/支', '金额', '收/付款方式', '交易状态', '备注']
 
   return (
     <div className="p-6">
@@ -97,19 +130,24 @@ export default function ViewData() {
         className="overflow-y-auto overflow-x-hidden rounded border border-zinc-200 bg-white shadow max-h-[70vh]"
         ref={bodyRef}
       >
-        <table ref={tableRef} className="min-w-full text-sm">
+        <table ref={tableRef} className="text-sm">
           <thead className="bg-zinc-50 sticky top-0 z-10">
             <tr>
               {fields.map((f, i) => (
                 <th
                   key={f}
-                  className={`px-3 py-2 text-left ${
-                    f === 'item'
-                      ? 'max-w-[12rem] whitespace-normal break-all'
-                      : 'whitespace-nowrap'
+                  style={{ width: colWidths[f], minWidth: colWidths[f] }}
+                  className={`relative px-3 py-2 truncate border-r border-zinc-200 last:border-r-0 ${
+                    ['amount', 'type', 'status'].includes(f)
+                      ? 'text-center'
+                      : 'text-left'
                   }`}
                 >
                   {headers[i]}
+                  <div
+                    onMouseDown={e => handleMouseDown(e, f)}
+                    className="absolute right-0 top-0 h-full w-1 cursor-col-resize select-none"
+                  />
                 </th>
               ))}
             </tr>
@@ -120,10 +158,9 @@ export default function ViewData() {
                 {fields.map(f => (
                   <td
                     key={f}
-                    className={`px-3 py-2 cursor-pointer ${
-                      f === 'item'
-                        ? 'max-w-[12rem] whitespace-normal break-all'
-                        : 'whitespace-nowrap'
+                    style={{ width: colWidths[f], minWidth: colWidths[f] }}
+                    className={`px-3 py-2 truncate border-r border-zinc-200 last:border-r-0 cursor-pointer ${
+                      ['amount', 'type', 'status'].includes(f) ? 'text-center' : ''
                     }`}
                     onClick={() => handleCellClick(idx, f)}
                   >
@@ -135,6 +172,18 @@ export default function ViewData() {
                         autoFocus
                         className="w-full border rounded px-1"
                       />
+                    ) : f === 'amount' ? (
+                      <span
+                        className={
+                          r.type?.includes('支出')
+                            ? 'text-red-600'
+                            : r.type?.includes('收入')
+                              ? 'text-green-600'
+                              : 'text-purple-600'
+                        }
+                      >
+                        {txns[idx][f] || ''}
+                      </span>
                     ) : (
                       txns[idx][f] || ''
                     )}
