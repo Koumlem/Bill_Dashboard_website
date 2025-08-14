@@ -12,7 +12,7 @@ export default function Layout({ children }) {
         <nav className="flex flex-col space-y-4 text-sm">
           <NavItem to="/analysis" label="仪表盘" />
           <NavItem to="/" label="账单导入" />
-          <NavItem to="#" label="分类汇总" />
+          <NavItem to="/view-data" label="查看数据" />
         </nav>
       </aside>
 

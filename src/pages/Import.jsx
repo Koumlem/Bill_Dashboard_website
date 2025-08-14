@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import UploadBox from '../components/UploadBox'
 import TablePreview from '../components/TablePreview'
@@ -8,19 +8,22 @@ export default function ImportPage() {
   const [txns, setTxns] = useState([])
   const navigate = useNavigate()
 
-  useEffect(() => {
-    const saved = localStorage.getItem('transactions')
-    if (saved) setTxns(JSON.parse(saved))
-  }, [])
-
   const handleParsed = (raw = []) => {
     const cleaned = processData(raw)
+    // 将当前解析数据合并到已保存数据中，然后再更新预览
+    const saved = JSON.parse(localStorage.getItem('transactions') || '[]')
+    if (txns.length) {
+      localStorage.setItem('transactions', JSON.stringify([...saved, ...txns]))
+    }
     setTxns(cleaned)
   }
 
   const handleConfirmImport = () => {
     if (!txns.length) return alert('请先上传并解析账单')
-    localStorage.setItem('transactions', JSON.stringify(txns))
+    const saved = JSON.parse(localStorage.getItem('transactions') || '[]')
+    const merged = [...saved, ...txns]
+    localStorage.setItem('transactions', JSON.stringify(merged))
+    setTxns([])
     navigate('/analysis')
   }
 
