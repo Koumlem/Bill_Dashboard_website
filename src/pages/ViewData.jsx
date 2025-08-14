@@ -17,10 +17,10 @@ export default function ViewData() {
     time: 140,
     merchant: 200,
     amount: 140,
+    tags: 200,
     item: 200,
     type: 140,
     channel: 150,
-    tags: 200,
     status: 140,
     note: 140
   }
@@ -106,6 +106,13 @@ export default function ViewData() {
     setNewTagName('')
   }
 
+  const handleDeleteTag = name => {
+    const updated = tags.filter(t => t.name !== name)
+    setTags(updated)
+    setSelectedTags(prev => prev.filter(t => t !== name))
+    localStorage.setItem('tags', JSON.stringify(updated))
+  }
+
   const toggleSelectTag = name => {
     setSelectedTags(prev =>
       prev.includes(name) ? prev.filter(t => t !== name) : [...prev, name]
@@ -146,10 +153,10 @@ export default function ViewData() {
     'time',
     'merchant',
     'amount',
+    'tags',
     'item',
     'type',
     'channel',
-    'tags',
     'status',
     'note'
   ]
@@ -157,10 +164,10 @@ export default function ViewData() {
     '时间',
     '交易对方',
     '金额',
+    '标签',
     '商品说明',
     '收/支',
     '收/付款方式',
-    '标签',
     '交易状态',
     '备注'
   ]
@@ -273,18 +280,24 @@ export default function ViewData() {
           <div className="bg-white rounded p-4 w-72 space-y-2">
             <div className="max-h-40 overflow-y-auto space-y-1">
               {tags.map(t => (
-                <label key={t.name} className="flex items-center gap-2">
+                <div key={t.name} className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={selectedTags.includes(t.name)}
                     onChange={() => toggleSelectTag(t.name)}
                   />
                   <span
-                    className="inline-block w-3 h-3 rounded"
+                    className="inline-block w-3 h-3"
                     style={{ backgroundColor: t.color }}
                   />
                   <span>{t.name}</span>
-                </label>
+                  <button
+                    onClick={() => handleDeleteTag(t.name)}
+                    className="text-xs text-zinc-400 hover:text-zinc-600"
+                  >
+                    ❌
+                  </button>
+                </div>
               ))}
             </div>
             <div className="flex items-center gap-2">
@@ -300,14 +313,14 @@ export default function ViewData() {
                 placeholder="标签名字"
                 className="border rounded px-2 py-1 flex-1"
               />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={handleAddTag}
-                className="px-2 py-1 bg-blue-500 text-white rounded"
+                className="px-3 py-1 bg-blue-500 text-white rounded"
               >
                 添加
               </button>
-            </div>
-            <div className="text-right space-x-2 pt-2">
               <button
                 onClick={handleSaveTags}
                 className="px-3 py-1 bg-blue-500 text-white rounded"
