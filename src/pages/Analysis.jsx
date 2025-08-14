@@ -26,11 +26,14 @@ export default function Analysis() {
     const saved = localStorage.getItem('transactions')
     if (saved) setTxns(JSON.parse(saved))
     const savedTags = localStorage.getItem('tags')
-    if (savedTags) {
-      const t = JSON.parse(savedTags)
-      setTags(t)
-      setSelectedTags(t.map(x => x.name))
-    }
+    const t = savedTags ? JSON.parse(savedTags) : []
+    const defaultList = [
+      ...t,
+      { name: '总支出', color: '#ef4444' },
+      { name: '总收入', color: '#22c55e' }
+    ]
+    setTags(defaultList)
+    setSelectedTags(['总支出', '总收入'])
   }, [])
 
   // 按日期过滤
@@ -70,12 +73,17 @@ export default function Analysis() {
   )
 
   const dateAmounts = {}
-  typeFiltered.forEach(t => {
+  periodFiltered.forEach(t => {
     const d = t.time ? t.time.slice(0, 10) : ''
     if (!d) return
-    if (!dateAmounts[d]) dateAmounts[d] = {}
+    if (!dateAmounts[d]) dateAmounts[d] = { '总支出': 0, '总收入': 0 }
     const tagNames = t.tags && t.tags.length ? t.tags : ['未分类']
     const amount = Math.abs(parseFloat(t.amount || 0))
+    if (String(t.type).includes('支')) {
+      dateAmounts[d]['总支出'] += amount
+    } else if (String(t.type).includes('收')) {
+      dateAmounts[d]['总收入'] += amount
+    }
     tagNames.forEach(name => {
       dateAmounts[d][name] = (dateAmounts[d][name] || 0) + amount
     })
@@ -93,13 +101,22 @@ export default function Analysis() {
       (a, b) => new Date(a) - new Date(b)
     )
   }
-  const chartData = sortedDates.map(d => ({ date: d, ...dateAmounts[d] }))
-  const chartWidth = chartData.length * 60 + 80
-  const maxAmount = Math.max(
-    0,
-    ...chartData.flatMap(d => selectedTags.map(name => d[name] || 0))
-  )
-  const base = maxAmount / 4
+  const chartData = sortedDates.map(d => ({
+    date: d,
+    '总支出': 0,
+    '总收入': 0,
+    ...(dateAmounts[d] || {})
+  }))
+  const chartWidth = 600
+  const innerWidth = chartWidth - 80
+  const spacing = innerWidth / Math.max(chartData.length - 1, 1)
+  const maxTxnAmount = periodFiltered
+    .filter(t => String(t.type).includes('支'))
+    .reduce(
+      (max, t) => Math.max(max, Math.abs(parseFloat(t.amount || 0))),
+      0
+    )
+  const base = maxTxnAmount / 4
   let unit
   if (base < 10) unit = 10
   else if (base < 50) unit = 50
@@ -249,11 +266,11 @@ export default function Analysis() {
           </label>
         ))}
       </div>
-      <div className="overflow-x-auto w-full">
-        <svg width={chartWidth} height={250}>
+      <div className="w-full">
+        <svg viewBox={`0 0 ${chartWidth} 250`} width="100%" height={250}>
           <line x1="40" y1="200" x2={chartWidth - 40} y2="200" stroke="#000" />
           <line x1="40" y1="20" x2="40" y2="200" stroke="#000" />
-          {[1, 2, 3, 4].map(i => {
+          {[0, 1, 2, 3, 4].map(i => {
             const y = 200 - (i * 180) / 4
             return (
               <g key={i}>
@@ -275,14 +292,11 @@ export default function Analysis() {
               </g>
             )
           })}
-          <text x="10" y={204} fontSize="10" fill="#facc15">
-            0
-          </text>
           {selectedTags.map(name => {
             const color = tags.find(t => t.name === name)?.color || '#000'
             const points = chartData
               .map((d, i) => {
-                const x = i * 60 + 40
+                const x = i * spacing + 40
                 const y = 200 - ((d[name] || 0) / (yMax || 1)) * 180
                 return `${x},${y}`
               })
@@ -298,7 +312,7 @@ export default function Analysis() {
             )
           })}
           {chartData.map((d, i) => {
-            const x = i * 60 + 40
+            const x = i * spacing + 40
             const dateObj = new Date(d.date)
             const day = dateObj.getDate()
             const isSunday = dateObj.getDay() === 0
