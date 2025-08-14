@@ -4,24 +4,27 @@ import UploadBox from '../components/UploadBox'
 import TablePreview from '../components/TablePreview'
 import { processData } from '../utils/processData'
 
+function mergeUniqueTxns(a = [], b = []) {
+  const makeKey = t =>
+    [t.time, t.merchant, t.item, t.type, t.amount, t.channel, t.status, t.note].join('|')
+  const map = new Map()
+  ;[...a, ...b].forEach(t => map.set(makeKey(t), t))
+  return Array.from(map.values())
+}
+
 export default function ImportPage() {
   const [txns, setTxns] = useState([])
   const navigate = useNavigate()
 
   const handleParsed = (raw = []) => {
     const cleaned = processData(raw)
-    // 将当前解析数据合并到已保存数据中，然后再更新预览
-    const saved = JSON.parse(localStorage.getItem('transactions') || '[]')
-    if (txns.length) {
-      localStorage.setItem('transactions', JSON.stringify([...saved, ...txns]))
-    }
-    setTxns(cleaned)
+    setTxns(prev => mergeUniqueTxns(prev, cleaned))
   }
 
   const handleConfirmImport = () => {
     if (!txns.length) return alert('请先上传并解析账单')
     const saved = JSON.parse(localStorage.getItem('transactions') || '[]')
-    const merged = [...saved, ...txns]
+    const merged = mergeUniqueTxns(saved, txns)
     localStorage.setItem('transactions', JSON.stringify(merged))
     setTxns([])
     navigate('/analysis')
